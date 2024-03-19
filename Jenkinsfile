@@ -3,35 +3,42 @@ pipeline {
     stages{
         stage('Build Maven'){
             steps{
-                git url:'https://github.com/akshu20791/cicdakshat/', branch: "master"
+                git url:'https://github.com/karthikhr97/cicdakshat/', branch: "master"
                sh 'mvn clean install'
             }
         }
         stage('Build docker image'){
             steps{
                 script{
-                    sh 'docker build -t akshu20791/endtoendproject6march:v1 .'
+                    sh 'docker build -t karthikhr97/endtoendproject6march:v5 .'
                 }
             }
         }
           stage('Docker login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-pwd', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                withCredentials([usernamePassword(credentialsId: 'docker_cred', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                     sh "echo $PASS | docker login -u $USER --password-stdin"
-                    sh 'docker push akshu20791/endtoendproject6march:v1'
+                    sh 'docker push karthikhr97/endtoendproject6march:v5'
                 }
             }
         }
-        
-        
-        stage('Deploy to k8s'){
-            when{ expression {env.GIT_BRANCH == 'origin/master'}}
-            steps{
-                script{
-                     kubernetesDeploy (configs: 'deploymentservice.yaml' ,kubeconfigId: 'k8sconfigpwd')
-                   
+           stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh 'mvn clean sonar:sonar'
+                }
+            }
+        }
+        stage('Kubernetes Login and Deploy') {
+            when { expression { env.GIT_BRANCH == 'origin/master' } }
+             steps {
+                sshagent(['sshprivatekey']) {
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.12.95 ls"
+                }
+                script {
+                    kubernetesDeploy(configs: 'deploymentservice.yaml', kubeconfigId: 'k8sconfigpwd')
                 }
             }
         }
     }
-}
+  }
