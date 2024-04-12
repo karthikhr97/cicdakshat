@@ -33,9 +33,6 @@ pipeline {
         stage('Kubernetes Login and Deploy') {
             when { expression { env.GIT_BRANCH == 'origin/master' } }
              steps {
-                sshagent(['sshprivatekey']) {
-                    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.12.95 ls"
-                }
                 script {
                     kubernetesDeploy(configs: 'deploymentservice.yaml', kubeconfigId: 'k8sconfigpwd')
                 }
